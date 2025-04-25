@@ -6,7 +6,7 @@ import requests
 
 app = Flask(__name__)
 
-BOT_ID = 'YOUR_BOT_ID'  # Replace with your actual bot ID
+BOT_ID = 'Brendan's Word Counter'
 TARGET_NAME = "Brendan O'Bryant"
 WORD_LIMIT = 100
 STORAGE_FILE = 'word_counts.json'
