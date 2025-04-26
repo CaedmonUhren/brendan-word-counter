@@ -7,7 +7,7 @@ import requests
 app = Flask(__name__)
 
 # PERSONALIZE THIS: Replace with your actual bot ID from https://dev.groupme.com/bots
-BOT_ID = "Brendan's Word Counter"
+BOT_ID = '4b1b7c41b6d631e5d56a5ef9da'
 
 # Name must match EXACTLY as it appears in GroupMe messages
 TARGET_NAME = "Brendan O'Bryant"
