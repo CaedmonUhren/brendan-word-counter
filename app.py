@@ -1,20 +1,19 @@
 from flask import Flask, request
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 
 app = Flask(__name__)
 
-# PERSONALIZE THIS: Replace with your actual bot ID from https://dev.groupme.com/bots
-BOT_ID = '4b1b7c41b6d631e5d56a5ef9da'
+# PERSONALIZE THIS: Replace with your bot ID
+BOT_ID = 'dae4f30bebc8f7e5334637fea1'
 
-# Name must match EXACTLY as it appears in GroupMe messages
+# Brendan's exact GroupMe name
 TARGET_NAME = "Brendan O'Bryant"
-WORD_LIMIT = 100
 
-# This file stores daily word counts
-STORAGE_FILE = 'word_counts.json'
+# This file stores timestamps of Brendan's messages
+STORAGE_FILE = 'timestamps.json'
 
 
 # === Utility Functions ===
@@ -29,12 +28,6 @@ def save_data(data):
     with open(STORAGE_FILE, 'w') as f:
         json.dump(data, f)
 
-def get_today():
-    return datetime.utcnow().strftime('%Y-%m-%d')
-
-def count_words(message):
-    return len(message.strip().split())
-
 def post_message(text):
     url = 'https://api.groupme.com/v3/bots/post'
     data = {
@@ -45,44 +38,53 @@ def post_message(text):
     if response.status_code != 202:
         print(f"Failed to send message: {response.status_code} - {response.text}")
 
+def get_current_timestamp():
+    return datetime.utcnow().timestamp()
+
 
 # === Webhook ===
 
 @app.route('/', methods=['POST'])
 def webhook():
     data = request.get_json()
+    print("Received data:", data)
 
-    # GroupMe will also POST messages sent by your bot — ignore those
     if data.get('sender_type') == 'bot':
         return 'OK', 200
 
     name = data.get('name')
-    text = data.get('text', '')
 
-    # Only track messages from Brendan
     if name != TARGET_NAME:
         return 'OK', 200
 
-    today = get_today()
-    word_count = count_words(text)
+    current_time = get_current_timestamp()
     storage = load_data()
 
-    # Update daily word count
-    if today not in storage:
-        storage[today] = {}
+    # Load Brendan's past timestamps
+    timestamps = storage.get(TARGET_NAME, [])
 
-    current_total = storage[today].get(name, 0)
-    new_total = current_total + word_count
-    storage[today][name] = new_total
+    # Keep only timestamps within the last 60 seconds
+    one_minute_ago = current_time - 60
+    timestamps = [ts for ts in timestamps if ts >= one_minute_ago]
+
+    # Add current message
+    timestamps.append(current_time)
+    storage[TARGET_NAME] = timestamps
     save_data(storage)
 
-    words_left = max(0, WORD_LIMIT - new_total)
-    response_text = (
-        f"You have sent {new_total} words today. "
-        f"You are {words_left} words away from your daily 100 word limit."
-    )
+    # Check how many messages within last minute
+    message_count = len(timestamps)
+    print(f"Message count in last minute: {message_count}")
 
-    post_message(response_text)
+    # Send warnings
+    if message_count == 2:
+        post_message("Slow down Brendan")
+    elif message_count == 3:
+        post_message("I said slow down!")
+    elif message_count == 4:
+        post_message("TAKE A BREAK AND TOUCH GRASS")
+    elif message_count == 5:
+        post_message("Alright that's it. Pastor Lucas, it's time to kick him.")
 
     return 'OK', 200
 
